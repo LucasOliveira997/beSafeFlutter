@@ -1,6 +1,10 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_app/utilities/constants.dart';
+import 'package:fluttertoast/fluttertoast.dart';
+import 'package:http/http.dart' as http;
 
 class LoginScreen extends StatefulWidget {
   @override
@@ -9,6 +13,45 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   bool _rememberMe = false;
+
+  String login;
+  String senha;
+  bool emptyL = false;
+  bool emptyS = false;
+  String msgToast = '';
+
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+
+  _loginRequest() async {
+    // set up POST request arguments
+    String url = 'https://vendasprojeto.herokuapp.com/authenticate';
+    Map<String, String> headers = {"Content-type": "application/json"};
+    String json = '{"login": "${login}","senha": "${senha}"}';
+    // make POST request
+    http.Response response = await http.post(url, headers: headers, body: json);
+    // check the status code for the result
+    int statusCode = response.statusCode;
+    // this API passes back the id of the new item added to the body
+    String responseBody = response.body;
+    Map<String, dynamic> usuario = jsonDecode(responseBody);
+    print(usuario);
+    //home navigation
+    if (statusCode == 200) {
+      // Navigator.push(context, MaterialPageRoute(builder: (context) => Home()));
+      print("Sucesso!!!!!!!!!!!!!!!!!!");
+    }
+    //LOGIN OU SENHA INVALIDOS
+    if (statusCode == 400) {
+      Fluttertoast.showToast(
+          msg: "Login e/ou senha inválidos",
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.BOTTOM,
+          timeInSecForIosWeb: 1,
+          backgroundColor: Colors.red,
+          textColor: Colors.white,
+          fontSize: 16.0);
+    }
+  }
 
   _buildEmailTF() {
     return Column(
@@ -33,7 +76,7 @@ class _LoginScreenState extends State<LoginScreen> {
             ],
           ),
           height: 60.0,
-          child: TextField(
+          child: TextFormField(
             keyboardType: TextInputType.emailAddress,
             style: TextStyle(color: Colors.black38, fontFamily: 'OpenSans'),
             decoration: InputDecoration(
@@ -46,6 +89,17 @@ class _LoginScreenState extends State<LoginScreen> {
                 fontFamily: 'OpenSans',
               ),
             ),
+            validator: (String value) {
+              if (value.isEmpty) {
+                setState(() {
+                  emptyL = true;
+                });
+              }
+              return null;
+            }, //validator
+            onSaved: (String value) {
+              login = value;
+            },
           ),
         )
       ],
@@ -75,7 +129,7 @@ class _LoginScreenState extends State<LoginScreen> {
             ],
           ),
           height: 60.0,
-          child: TextField(
+          child: TextFormField(
             obscureText: true,
             style: TextStyle(color: Colors.black38, fontFamily: 'OpenSans'),
             decoration: InputDecoration(
@@ -88,6 +142,17 @@ class _LoginScreenState extends State<LoginScreen> {
                 fontFamily: 'OpenSans',
               ),
             ),
+            validator: (String value) {
+              if (value.isEmpty) {
+                setState(() {
+                  emptyS = true;
+                });
+              }
+              return null;
+            }, //validator
+            onSaved: (String value) {
+              senha = value;
+            },
           ),
         )
       ],
@@ -141,7 +206,35 @@ class _LoginScreenState extends State<LoginScreen> {
       width: double.infinity,
       child: RaisedButton(
         elevation: 5.0,
-        onPressed: () => print('Login button pressed'),
+        onPressed: () {
+          if (!_formKey.currentState.validate()) {
+            return;
+          }
+          _formKey.currentState.save();
+          _loginRequest();
+          if (emptyL == true && emptyS == false) {
+            msgToast = 'Informe o login';
+          }
+          if (emptyL == false && emptyS == true) {
+            msgToast = 'Informe sua senha';
+          }
+          if (emptyL == true && emptyS == true) {
+            msgToast = 'Informe Login e Senha';
+          }
+          if (msgToast != '') {
+            Fluttertoast.showToast(
+                msg: msgToast,
+                toastLength: Toast.LENGTH_SHORT,
+                gravity: ToastGravity.BOTTOM,
+                timeInSecForIosWeb: 1,
+                backgroundColor: Colors.red,
+                textColor: Colors.white,
+                fontSize: 16.0);
+          }
+          emptyL = false;
+          emptyS = false;
+          msgToast = '';
+        },
         padding: EdgeInsets.all(15.0),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(30.0),
@@ -170,7 +263,7 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
         SizedBox(height: 20.0),
         Text(
-          'Entre com:',
+          'Entre com o Facebook:',
           style: kLabelStyle,
         )
       ],
@@ -277,31 +370,34 @@ class _LoginScreenState extends State<LoginScreen> {
                     horizontal: 23.0,
                     vertical: 75.0,
                   ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: <Widget>[
-                      Text(
-                        'Be Safe',
-                        style: TextStyle(
-                          fontFamily: 'OpenSans',
-                          fontSize: 30.0,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: <Widget>[
+                        Text(
+                          'Be Safe',
+                          style: TextStyle(
+                            fontFamily: 'OpenSans',
+                            fontSize: 30.0,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
                         ),
-                      ),
-                      SizedBox(
-                        height: 30.0,
-                      ),
-                      _buildEmailTF(),
-                      SizedBox(height: 30.0),
-                      _buildPasswordTF(),
-                      _buildForgotPasswordBtn(),
-                      _buildRememberMeCheckBox(),
-                      _buildLoginBtn(),
-                      _buildSignInWithText(),
-                      _buildSocialBtnRow(),
-                      _buildSignUpBtn(),
-                    ],
+                        SizedBox(
+                          height: 30.0,
+                        ),
+                        _buildEmailTF(),
+                        SizedBox(height: 30.0),
+                        _buildPasswordTF(),
+                        _buildForgotPasswordBtn(),
+                        _buildRememberMeCheckBox(),
+                        _buildLoginBtn(),
+                        _buildSignInWithText(),
+                        _buildSocialBtnRow(),
+                        _buildSignUpBtn(),
+                      ],
+                    ),
                   ),
                 ),
               )
